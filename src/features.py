@@ -49,7 +49,7 @@ def build_features():
     raw = load_matches()
     team_matches = form_eval(reshape_matches(raw))
     final = strip_data(raw, team_matches)
-    return final[["Date", "Home", "Away", "home_form", "away_form"]].dropna()
+    return final[["Date", "Home", "Away", "Res" , "home_form", "away_form"]].dropna()
 
 if __name__ == "__main__":
     raw = load_matches()
