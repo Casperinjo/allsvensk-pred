@@ -52,15 +52,36 @@ def strip_data(matches : pd.DataFrame, team_matches : pd.DataFrame) -> pd.DataFr
     result = result.merge(away_df, on=["Date", "Away"], how="left")
     return result
 
+def add_implied_probs(matches : pd.DataFrame) -> pd.DataFrame:
+    df = matches.copy()
+    df["p_home"] = 1 / df["AvgCH"]
+    df["p_draw"] = 1 / df["AvgCD"]
+    df["p_away"] = 1 / df["AvgCA"]
+
+    df["overround"] = df["p_home"] + df["p_draw"] + df["p_away"]
+
+    df["implied_prob_home"] = df["p_home"] / df["overround"]
+    df["implied_prob_draw"] = df["p_draw"] / df["overround"]
+    df["implied_prob_away"] = df["p_away"] / df["overround"]
+
+    probs_sum_ok = np.allclose(df[["implied_prob_home","implied_prob_draw","implied_prob_away"]].sum(axis=1), 1.0)
+    print(f"Sum of implied probs OK: {probs_sum_ok}")
+
+    return df
+
+
+
 def build_features():
     raw = load_matches()
     team_matches = form_eval(reshape_matches(raw))
-    final = strip_data(raw, team_matches)
-    return final[["Date", "Home", "Away", "Res" , "home_form", "away_form" , "home_gd_form" ,"away_gd_form" , "home_h2h_form" , "away_h2h_form"]].dropna()
+    stripped_data = strip_data(raw, team_matches)
+    final = add_implied_probs(stripped_data)
+    return final[["Date", "Home", "Away", "Res" , "home_form", "away_form" , "home_gd_form" ,"away_gd_form" , "home_h2h_form" , "away_h2h_form", "implied_prob_home",  "implied_prob_draw",  "implied_prob_away"]].dropna()
 
 if __name__ == "__main__":
     raw = load_matches()
     team_matches = form_eval(reshape_matches(raw))
-    final = strip_data(raw, team_matches)
-    print(final[["Date", "Home", "Away", "Res" , "home_form", "away_form" , "home_gd_form" ,"away_gd_form" , "home_h2h_form" , "away_h2h_form"]].dropna())
+    stripped_data = strip_data(raw, team_matches)
+    final = add_implied_probs(stripped_data)
+    print(final[["Date", "Home", "Away", "Res" , "home_form", "away_form" , "home_gd_form" ,"away_gd_form" , "home_h2h_form" , "away_h2h_form", "implied_prob_home",  "implied_prob_draw",  "implied_prob_away"]].dropna())
 

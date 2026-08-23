@@ -8,7 +8,7 @@ import pandas as pd
 
 matches = build_features()
 
-X = matches[["home_form" , "away_form" , "home_gd_form" , "away_gd_form" , "home_h2h_form" , "away_h2h_form"]]
+X = matches[["home_form" , "away_form" , "home_gd_form" , "away_gd_form" , "home_h2h_form" , "away_h2h_form", "implied_prob_home",  "implied_prob_draw",  "implied_prob_away"]]
 y = matches["Res"]
 
 X_train, X_test, y_train, y_test = train_test_split(
