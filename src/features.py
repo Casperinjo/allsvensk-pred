@@ -14,6 +14,7 @@ def reshape_matches(matches : pd.DataFrame) -> pd.DataFrame:
             default=0
     
         )
+    home_df["goal_diff"] = home_df["goals_for"] - home_df["goals_against"]
 
     away_df = matches[['Date' , 'Home' , 'Away', 'HG' , 'AG', 'Res']].copy().rename(columns={'Away' : 'team' , 'Home' : 'opponent' , 'AG' : 'goals_for' , 'HG' : 'goals_against', "Res" : "points"}).assign(is_home=False)
     away_df["points"] = np.select(
@@ -22,7 +23,7 @@ def reshape_matches(matches : pd.DataFrame) -> pd.DataFrame:
         choicelist=[3,1],
         default=0
     )
-
+    away_df["goal_diff"] = away_df["goals_for"] - away_df["goals_against"]
     stacked = pd.concat([home_df , away_df], ignore_index=True)
     stacked = stacked.sort_values(["team" , "Date"])
 
@@ -32,14 +33,20 @@ def reshape_matches(matches : pd.DataFrame) -> pd.DataFrame:
 def form_eval(team_matches : pd.DataFrame , window = 5) -> pd.DataFrame:
     df = team_matches.copy()
     df["rolling_avg"] = (df
-                        .groupby("team")["points"]
+                        .groupby(["team", "is_home"])["points"]
                         .transform(lambda s : s.shift(1).rolling(window).mean()))
+    df["rolling_gd"] = (df
+                        .groupby(["team", "is_home"])["goal_diff"]
+                        .transform(lambda s : s.shift(1).rolling(window).mean()))
+    df["h2h_avg"] = (df
+                      .groupby(["team", "opponent"])["points"]
+                      .transform(lambda s: s.shift(1).expanding().mean())).fillna(1.0)
     
     return df
 
 def strip_data(matches : pd.DataFrame, team_matches : pd.DataFrame) -> pd.DataFrame:
-    home_df = team_matches[team_matches["is_home"] == True][["Date", "team" , "rolling_avg"]].copy().rename(columns={"team" : "Home", "rolling_avg" : "home_form"})
-    away_df = team_matches[team_matches["is_home"] == False][["Date", "team" , "rolling_avg"]].copy().rename(columns={"team" : "Away", "rolling_avg" : "away_form"})
+    home_df = team_matches[team_matches["is_home"] == True][["Date", "team" , "rolling_avg" , "rolling_gd" , "h2h_avg"]].copy().rename(columns={"team" : "Home", "rolling_avg" : "home_form" , "rolling_gd" : "home_gd_form" , "h2h_avg" : "home_h2h_form"})
+    away_df = team_matches[team_matches["is_home"] == False][["Date", "team" , "rolling_avg" , "rolling_gd", "h2h_avg"]].copy().rename(columns={"team" : "Away", "rolling_avg" : "away_form" , "rolling_gd" : "away_gd_form", "h2h_avg" : "away_h2h_form"})
 
     result = matches.merge(home_df, on=["Date", "Home"], how="left")
     result = result.merge(away_df, on=["Date", "Away"], how="left")
@@ -49,11 +56,11 @@ def build_features():
     raw = load_matches()
     team_matches = form_eval(reshape_matches(raw))
     final = strip_data(raw, team_matches)
-    return final[["Date", "Home", "Away", "Res" , "home_form", "away_form"]].dropna()
+    return final[["Date", "Home", "Away", "Res" , "home_form", "away_form" , "home_gd_form" ,"away_gd_form" , "home_h2h_form" , "away_h2h_form"]].dropna()
 
 if __name__ == "__main__":
     raw = load_matches()
     team_matches = form_eval(reshape_matches(raw))
     final = strip_data(raw, team_matches)
-    print(final[["Date", "Home", "Away", "Res" ,"home_form", "away_form"]].dropna().head(10))
+    print(final[["Date", "Home", "Away", "Res" , "home_form", "away_form" , "home_gd_form" ,"away_gd_form" , "home_h2h_form" , "away_h2h_form"]].dropna())
 
