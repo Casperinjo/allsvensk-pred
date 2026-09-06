@@ -11,7 +11,7 @@ from pathlib import Path
 
 matches = build_features()
 
-X = matches[["home_form" , "away_form" , "home_gd_form" , "away_gd_form" , "home_h2h_form" , "away_h2h_form", "home_elo", "away_elo"]]
+X = matches[["home_form" , "away_form" , "home_gd_form" , "away_gd_form" , "home_h2h_form" , "away_h2h_form", "home_elo", "away_elo" , "away_prev_ppg"]]
 y = matches["Res"]
 
 X_train, X_test, y_train, y_test = train_test_split(

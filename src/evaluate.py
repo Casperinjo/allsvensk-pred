@@ -81,6 +81,6 @@ def evaluate_model(X: pd.DataFrame, y: pd.Series, n_splits: int = 5) -> None:
 if __name__ == "__main__":
     matches = build_features()
     X = matches[["home_form", "away_form", "home_gd_form", "away_gd_form",
-                 "home_h2h_form", "away_h2h_form", "home_elo", "away_elo"]]
+                 "home_h2h_form", "away_h2h_form", "home_elo", "away_elo", "away_prev_ppg"]]
     y = matches["Res"]
     evaluate_model(X, y)
