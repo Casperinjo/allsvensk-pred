@@ -1,5 +1,45 @@
-"""Evaluate model predictions against actual match outcomes.
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import TimeSeriesSplit
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score, log_loss
 
-TODO: metrics (e.g. accuracy, log loss) and comparison against a
-baseline (e.g. "always predict home win").
-"""
+from src.features import build_features
+
+
+def evaluate_model(X: pd.DataFrame, y: pd.Series, n_splits: int = 5) -> None:
+    """Chronological cross-validation via TimeSeriesSplit.
+
+    Unlike a single train_test_split, this produces n_splits separate
+    (train, test) folds that all preserve time order (every test fold comes
+    strictly after its train fold — no shuffling, no future leakage). Report
+    accuracy + log_loss PER FOLD, plus their mean/std across folds, so you can
+    tell a real improvement apart from noise on one lucky/unlucky split.
+
+    Steps:
+      1. tss = TimeSeriesSplit(n_splits=n_splits)
+      2. for train_idx, test_idx in tss.split(X):
+           - X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]   # positional!
+             not .loc — build_features()'s dropna() leaves gaps in the row labels.
+           - same slicing for y
+           - fit a FRESH StandardScaler + LogisticRegression per fold (don't reuse
+             one fitted on a previous fold)
+           - accuracy_score(y_test, y_pred)
+           - log_loss(y_test, y_proba, labels=model.classes_)
+      3. Collect each fold's accuracy/log_loss into lists, print per-fold values
+         plus mean/std at the end (np.mean / np.std).
+
+    Note: TimeSeriesSplit's folds grow in both position AND size over time — the
+    earliest fold trains on very little data, so don't be surprised if fold 1
+    looks worse than your existing single-split baseline.
+    """
+    raise NotImplementedError
+
+
+if __name__ == "__main__":
+    matches = build_features()
+    X = matches[["home_form", "away_form", "home_gd_form", "away_gd_form",
+                 "home_h2h_form", "away_h2h_form", "home_elo", "away_elo"]]
+    y = matches["Res"]
+    evaluate_model(X, y)

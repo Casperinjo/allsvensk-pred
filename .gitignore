@@ -2,6 +2,8 @@
 CLAUDE.md
 data/raw/*
 !data/raw/.gitkeep
+models/*
+!models/.gitkeep
 
 # --- Python ---
 __pycache__/

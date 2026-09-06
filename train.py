@@ -4,11 +4,14 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import StandardScaler
 import pandas as pd
+import joblib
+import json
+from pathlib import Path
 
 
 matches = build_features()
 
-X = matches[["home_form" , "away_form" , "home_gd_form" , "away_gd_form" , "home_h2h_form" , "away_h2h_form", "implied_prob_home",  "implied_prob_draw",  "implied_prob_away"]]
+X = matches[["home_form" , "away_form" , "home_gd_form" , "away_gd_form" , "home_h2h_form" , "away_h2h_form", "home_elo", "away_elo"]]
 y = matches["Res"]
 
 X_train, X_test, y_train, y_test = train_test_split(
@@ -36,3 +39,16 @@ print("------------------------------------")
 print(pd.Series(y_pred).value_counts())
 print("------------------------------------")
 print(pd.DataFrame(model.coef_, columns=X.columns, index=model.classes_))
+
+# Persist the fitted model + scaler + the exact feature column order, so the API
+# can load them once at startup instead of retraining on every request. Note this
+# saves the model as trained above (on the 80% train split, X_train_scaled) — fine
+# for now to get the API working end-to-end, but worth revisiting later: a model
+# you actually serve to users is usually refit on ALL available data (no held-out
+# test set needed once you're not evaluating it anymore).
+models_dir = Path(__file__).resolve().parent / "models"
+models_dir.mkdir(exist_ok=True)
+joblib.dump(model, models_dir / "model.pkl")
+joblib.dump(scaler, models_dir / "scaler.pkl")
+with open(models_dir / "feature_columns.json", "w") as f:
+    json.dump(list(X.columns), f)
