@@ -86,12 +86,7 @@ def add_implied_probs(matches : pd.DataFrame) -> pd.DataFrame:
 
 
 def _run_elo(matches: pd.DataFrame, k: float, home_advantage: float, initial_rating: float):
-    """Sequential Elo update loop over matches (must be sorted by Date ascending).
-
-    Returns (home_elo, away_elo, ratings): the pre-match rating recorded for
-    each row, and the final ratings dict after every match has been processed
-    (i.e. each team's *current* rating, going into a hypothetical next match).
-    """
+   
     ratings: dict[str, float] = {}
     home_elo = []
     away_elo = []
@@ -123,15 +118,7 @@ def _run_elo(matches: pd.DataFrame, k: float, home_advantage: float, initial_rat
 
 
 def add_elo_ratings(matches: pd.DataFrame, k: float = 20, home_advantage: float = 100, initial_rating: float = 1500) -> pd.DataFrame:
-    """Adds pre-match home_elo/away_elo columns.
-
-    Unlike every other feature so far, this can't be a groupby/transform: each
-    match's rating update depends on BOTH teams' current ratings against each
-    other, which in turn depend on all prior matches involving EITHER team — so
-    it needs a genuine sequential loop over matches in Date order. Ratings carry
-    across season boundaries (same choice already made for form_eval); a new
-    team defaults to initial_rating.
-    """
+   
     df = matches.copy()
     home_elo, away_elo, _ = _run_elo(df, k, home_advantage, initial_rating)
     df["home_elo"] = home_elo
@@ -140,28 +127,13 @@ def add_elo_ratings(matches: pd.DataFrame, k: float = 20, home_advantage: float 
 
 
 def get_current_elo_ratings(matches: pd.DataFrame, k: float = 20, home_advantage: float = 100, initial_rating: float = 1500) -> dict:
-    """Each team's Elo rating after their most recent played match — used by
-    get_matchup_features to feed a hypothetical next match."""
+
     _, _, ratings = _run_elo(matches, k, home_advantage, initial_rating)
     return ratings
 
 
 def get_matchup_features(home_team: str, away_team: str, team_matches: pd.DataFrame | None = None, elo_ratings: dict | None = None, window: int = 5, initial_rating: float = 1500) -> dict:
-    """Current feature snapshot for a hypothetical, not-yet-played matchup.
-
-    Unlike form_eval's rolling_avg/rolling_gd/h2h_avg (which are deliberately
-    shift(1)'d so a *training* row never sees its own match's outcome), here
-    there's no "own outcome" to avoid — home_team/away_team's most recent real
-    match should be INCLUDED in the window, not excluded from it. So this uses
-    its own (unshifted) mean over the tail of each team's history, evaluated at
-    "now" instead of at a specific historical row.
-
-    team_matches: pass in a pre-built reshape_matches(load_matches()) frame to
-    avoid reloading/reshaping the whole dataset on every call (predict.py builds
-    it once and reuses it across a batch of fixtures); builds it itself if omitted.
-    elo_ratings: pass in a pre-built get_current_elo_ratings(...) dict, same
-    reasoning — computing it is its own sequential pass over all matches.
-    """
+    
     if team_matches is None:
         team_matches = reshape_matches(load_matches())
     if elo_ratings is None:
