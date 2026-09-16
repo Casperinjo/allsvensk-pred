@@ -1,8 +1,13 @@
+from pathlib import Path
+
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from src.predict import predict_fixtures
 from src.fixtures import fetch_upcoming_fixtures
+
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 app = FastAPI(title="Allsvenskan Predictor API")
 
@@ -48,3 +53,10 @@ def get_upcoming_rounds_endpoint():
     upcoming_rounds = fetch_upcoming_fixtures()
     results = predict_fixtures(upcoming_rounds)
     return PredictionsResponse(predictions=results)
+
+
+# Serve the frontend as static files. Mounted LAST so the API routes above (and
+# FastAPI's own /docs, /openapi.json) take precedence; this "/" mount only catches
+# what they didn't. html=True makes "/" serve index.html. Same origin as the API,
+# so the page's fetch("/upcoming-round") needs no CORS.
+app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")

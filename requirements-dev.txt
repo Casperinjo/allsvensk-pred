@@ -1,0 +1,9 @@
+# Development / test dependencies — for your machine and CI, NOT the prod image.
+# Install with: pip install -r requirements-dev.txt
+#
+# Pulls in everything from the prod set, then adds tooling.
+-r requirements.txt
+
+pytest==9.1.1
+httpx==0.28.1     # required by FastAPI's TestClient in tests/test_api.py
+jupyter==1.1.1    # notebooks/ exploratory analysis
