@@ -159,6 +159,18 @@ def get_matchup_features(home_team: str, away_team: str, team_matches: pd.DataFr
     home_elo = elo_ratings.get(home_team, initial_rating)
     away_elo = elo_ratings.get(away_team, initial_rating)
 
+    team_matches_with_prev_season_ppg = add_prev_season_ppg(team_matches)
+
+    away_rows = team_matches_with_prev_season_ppg[
+      team_matches_with_prev_season_ppg["team"] == away_team
+    ]
+    away_prev_ppg = (
+        away_rows["prev_season_ppg"].iloc[-1]
+        if not away_rows.empty
+        else team_matches_with_prev_season_ppg["prev_season_ppg"].mean()
+    )
+
+
     return {
         "home_form": home_form,
         "away_form": away_form,
@@ -168,6 +180,9 @@ def get_matchup_features(home_team: str, away_team: str, team_matches: pd.DataFr
         "away_h2h_form": away_h2h_form,
         "home_elo": home_elo,
         "away_elo": away_elo,
+        "away_prev_ppg" : away_prev_ppg
+
+        
     }
 
 
