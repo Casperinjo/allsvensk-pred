@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Allsvenskan — Upcoming Round Predictions</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --page:           #f9f9f7;
+      --surface-1:      #fcfcfb;
+      --text-primary:   #0b0b0b;
+      --text-secondary: #52514e;
+      --muted:          #898781;
+      --border:         rgba(11, 11, 11, 0.10);
+      --home:           #2a78d6;  /* categorical slot 1 — blue    */
+      --draw:           #008300;  /* categorical slot 2 — green   */
+      --away:           #c0447a;  /* categorical slot 3 — magenta (stepped for label contrast) */
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:where(:not([data-theme="light"])) {
+        color-scheme: dark;
+        --page:           #0d0d0d;
+        --surface-1:      #1a1a19;
+        --text-primary:   #ffffff;
+        --text-secondary: #c3c2b7;
+        --muted:          #898781;
+        --border:         rgba(255, 255, 255, 0.10);
+        --home:           #3987e5;
+        --draw:           #10a010;
+        --away:           #d55181;
+      }
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --page:           #0d0d0d;
+      --surface-1:      #1a1a19;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --muted:          #898781;
+      --border:         rgba(255, 255, 255, 0.10);
+      --home:           #3987e5;
+      --draw:           #10a010;
+      --away:           #d55181;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      background: var(--page);
+      color: var(--text-primary);
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 32px 20px 64px; }
+
+    header { margin-bottom: 8px; }
+    h1 { font-size: 1.5rem; font-weight: 650; margin: 0 0 4px; letter-spacing: -0.01em; }
+    .sub { color: var(--text-secondary); font-size: 0.9rem; margin: 0; }
+
+    /* Legend — identity is never color-alone */
+    .legend {
+      display: flex; flex-wrap: wrap; gap: 16px;
+      margin: 20px 0 24px; padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .legend span { display: inline-flex; align-items: center; gap: 7px; font-size: 0.82rem; color: var(--text-secondary); }
+    .chip { width: 11px; height: 11px; border-radius: 3px; flex: 0 0 auto; }
+    .chip.home { background: var(--home); }
+    .chip.draw { background: var(--draw); }
+    .chip.away { background: var(--away); }
+
+    .card {
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin-bottom: 12px;
+    }
+    .teams {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 12px; margin-bottom: 12px;
+    }
+    .team { font-size: 1.02rem; font-weight: 560; }
+    .team.away { text-align: right; }
+    .team .fav { color: var(--text-primary); }
+    .vs { color: var(--muted); font-size: 0.78rem; font-weight: 500; flex: 0 0 auto; }
+
+    /* 100%-stacked bar: 2px surface gaps between fills, rounded data-ends */
+    .bar { display: flex; gap: 2px; height: 12px; margin-bottom: 10px; }
+    .seg { min-width: 2px; border-radius: 3px; }
+    .seg.home { background: var(--home); }
+    .seg.draw { background: var(--draw); }
+    .seg.away { background: var(--away); }
+
+    /* Numbers wear text ink, not the fill color */
+    .stats { display: flex; justify-content: space-between; gap: 8px; }
+    .stat { display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--text-secondary); }
+    .stat .val { font-variant-numeric: tabular-nums; color: var(--text-primary); font-weight: 500; }
+    .stat.is-fav .val { font-weight: 700; }
+    .stat.is-fav::after { content: "★"; color: var(--muted); font-size: 0.7rem; }
+
+    .note { color: var(--muted); font-size: 0.8rem; margin-top: 24px; }
+    .state { color: var(--text-secondary); padding: 40px 0; text-align: center; }
+    .state.error { color: var(--away); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Allsvenskan — Upcoming Round</h1>
+      <p class="sub">Model-predicted outcome probabilities for the next fixtures.</p>
+    </header>
+
+    <div class="legend" aria-hidden="true">
+      <span><i class="chip home"></i> Home win</span>
+      <span><i class="chip draw"></i> Draw</span>
+      <span><i class="chip away"></i> Away win</span>
+    </div>
+
+    <div id="content"><p class="state">Loading fixtures…</p></div>
+
+    <p class="note">Probabilities are the model's estimate and sum to 100%. ★ marks the most likely outcome.</p>
+  </div>
+
+  <script>
+    const pct = (x) => Math.round(x * 100);
+
+    function card(p) {
+      const outcomes = [
+        { key: "home", label: "Home", prob: p.home_win },
+        { key: "draw", label: "Draw", prob: p.draw },
+        { key: "away", label: "Away", prob: p.away_win },
+      ];
+      const favIdx = outcomes.reduce((best, o, i, a) => (o.prob > a[best].prob ? i : best), 0);
+
+      const segs = outcomes
+        .map((o) => `<div class="seg ${o.key}" style="flex-grow:${o.prob}" title="${o.label} ${pct(o.prob)}%"></div>`)
+        .join("");
+
+      const stats = outcomes
+        .map((o, i) => `
+          <span class="stat ${i === favIdx ? "is-fav" : ""}">
+            <i class="chip ${o.key}"></i>${o.label}
+            <span class="val">${pct(o.prob)}%</span>
+          </span>`)
+        .join("");
+
+      return `
+        <div class="card">
+          <div class="teams">
+            <span class="team home">${p.home_team}</span>
+            <span class="vs">vs</span>
+            <span class="team away">${p.away_team}</span>
+          </div>
+          <div class="bar">${segs}</div>
+          <div class="stats">${stats}</div>
+        </div>`;
+    }
+
+    async function load() {
+      const el = document.getElementById("content");
+      try {
+        const res = await fetch("/upcoming-round");
+        if (!res.ok) throw new Error(`API returned ${res.status}`);
+        const data = await res.json();
+        const preds = data.predictions || [];
+        if (preds.length === 0) {
+          el.innerHTML = `<p class="state">No upcoming matches found in the next few days.</p>`;
+          return;
+        }
+        el.innerHTML = preds.map(card).join("");
+      } catch (err) {
+        el.innerHTML = `<p class="state error">Could not load predictions: ${err.message}. Is the API running?</p>`;
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>
