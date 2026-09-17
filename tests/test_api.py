@@ -53,3 +53,10 @@ def test_index_page_is_served():
     resp = client.get("/")
     assert resp.status_code == 200
     assert "Allsvenskan" in resp.text  # the static frontend is mounted and reachable
+
+
+def test_health_endpoint():
+    # Cheap, dependency-free liveness/readiness check that deploy platforms poll.
+    resp = client.get("/health")
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "ok"}

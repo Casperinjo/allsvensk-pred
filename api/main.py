@@ -54,9 +54,14 @@ def get_upcoming_rounds_endpoint():
     results = predict_fixtures(upcoming_rounds)
     return PredictionsResponse(predictions=results)
 
+@app.get("/health")
+def get_health():
+    return {"status" : "ok"}
 
 # Serve the frontend as static files. Mounted LAST so the API routes above (and
 # FastAPI's own /docs, /openapi.json) take precedence; this "/" mount only catches
 # what they didn't. html=True makes "/" serve index.html. Same origin as the API,
 # so the page's fetch("/upcoming-round") needs no CORS.
 app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
+
+
