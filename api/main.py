@@ -27,9 +27,9 @@ class Prediction(BaseModel):
     home_win: float
     draw: float
     away_win: float
-    date: str
-    time: str
-    match_id : str
+    date: str | None = None
+    time: str | None = None
+    match_id : str | None = None
 
 
 
@@ -43,14 +43,7 @@ def predict_fixtures_endpoint(request: FixturesRequest) -> PredictionsResponse:
     results = predict_fixtures(pairs)
     return PredictionsResponse(predictions=results)
 
-@app.get("/get-fixtures" , response_model=FixturesRequest)
-def get_fixtures_endpoint() : 
-    result = fetch_upcoming_fixtures()
-    fixtures = []
-    for f in result:
-        fixture = Fixture(home_team=f["home"], away_team=f["away"])
-        fixtures.append(fixture)
-    return FixturesRequest(fixtures=fixtures)
+
 
 @app.get("/upcoming-round" , response_model=PredictionsResponse)
 def get_upcoming_rounds_endpoint():

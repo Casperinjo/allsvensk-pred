@@ -12,7 +12,11 @@ client = TestClient(main.app)
 
 
 def test_upcoming_round_returns_predictions(monkeypatch):
-    monkeypatch.setattr(main, "fetch_upcoming_fixtures", lambda: [("A", "B")])
+    # The fetcher now returns dicts (id/date/time), and the endpoint zips those
+    # onto each prediction — so the mock must supply them.
+    monkeypatch.setattr(main, "fetch_upcoming_fixtures", lambda: [
+        {"home": "A", "away": "B", "date": "2026-09-20", "time": "15:00:00", "id": "999"},
+    ])
     monkeypatch.setattr(main, "predict_fixtures", lambda pairs: [
         {"home_team": "A", "away_team": "B", "home_win": 0.5, "draw": 0.3, "away_win": 0.2},
     ])
@@ -24,6 +28,9 @@ def test_upcoming_round_returns_predictions(monkeypatch):
     assert len(preds) == 1
     assert preds[0]["home_team"] == "A"
     assert preds[0]["home_win"] == 0.5
+    # fixture metadata attached by the endpoint
+    assert preds[0]["date"] == "2026-09-20"
+    assert preds[0]["match_id"] == "999"
 
 
 def test_predict_fixtures_accepts_body(monkeypatch):
@@ -36,18 +43,6 @@ def test_predict_fixtures_accepts_body(monkeypatch):
 
     assert resp.status_code == 200
     assert resp.json()["predictions"][0]["away_team"] == "B"
-
-
-def test_get_fixtures_returns_fixture_objects(monkeypatch):
-    monkeypatch.setattr(main, "fetch_upcoming_fixtures", lambda: [("A", "B"), ("C", "D")])
-
-    resp = client.get("/get-fixtures")
-
-    assert resp.status_code == 200
-    fixtures = resp.json()["fixtures"]
-    assert fixtures[0] == {"home_team": "A", "away_team": "B"}
-    assert len(fixtures) == 2
-
 
 def test_index_page_is_served():
     resp = client.get("/")

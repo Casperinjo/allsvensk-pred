@@ -59,14 +59,17 @@ def test_name_map_covers_top_flight_and_has_valid_values():
 
 def test_fetch_keeps_only_not_started_and_maps_names(monkeypatch):
     payload = {"events": [
-        {"strHomeTeam": "Malmö", "strAwayTeam": "AIK", "strStatus": "NS"},
+        {"strHomeTeam": "Malmö", "strAwayTeam": "AIK", "strStatus": "NS",
+         "idEvent": "123", "dateEvent": "2026-09-20", "strTime": "15:00:00"},
         {"strHomeTeam": "Hammarby", "strAwayTeam": "GAIS", "strStatus": "FT"},  # played -> dropped
     ]}
     monkeypatch.setattr(fx.requests, "get", lambda *a, **k: FakeResponse(payload))
 
     result = fetch_upcoming_fixtures(days=1)
 
-    assert result == [("Malmo FF", "AIK")]
+    assert result == [
+        {"home": "Malmo FF", "away": "AIK", "date": "2026-09-20", "time": "15:00:00", "id": "123"}
+    ]
 
 
 def test_fetch_raises_on_unmapped_team(monkeypatch):
@@ -81,7 +84,8 @@ def test_fetch_raises_on_unmapped_team(monkeypatch):
 
 def test_fetch_serves_cached_result(monkeypatch):
     payload = {"events": [
-        {"strHomeTeam": "Malmö", "strAwayTeam": "AIK", "strStatus": "NS"},
+        {"strHomeTeam": "Malmö", "strAwayTeam": "AIK", "strStatus": "NS",
+         "idEvent": "123", "dateEvent": "2026-09-20", "strTime": "15:00:00"},
     ]}
     monkeypatch.setattr(fx.requests, "get", lambda *a, **k: FakeResponse(payload))
     first = fetch_upcoming_fixtures(days=1)
@@ -91,4 +95,6 @@ def test_fetch_serves_cached_result(monkeypatch):
     monkeypatch.setattr(fx.requests, "get", lambda *a, **k: FakeResponse({"events": []}))
     second = fetch_upcoming_fixtures(days=1)
 
-    assert second == first == [("Malmo FF", "AIK")]
+    assert second == first == [
+        {"home": "Malmo FF", "away": "AIK", "date": "2026-09-20", "time": "15:00:00", "id": "123"}
+    ]
