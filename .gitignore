@@ -2,6 +2,8 @@
 CLAUDE.md
 data/raw/*
 !data/raw/.gitkeep
+# SWE.csv is committed so CD builds have the data (source: football-data.co.uk)
+!data/raw/SWE.csv
 models/*
 !models/.gitkeep
 
