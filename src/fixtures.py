@@ -9,12 +9,15 @@ API_KEY = os.environ.get("THESPORTSDB_KEY", "3")
 BASE_URL = f"https://www.thesportsdb.com/api/v1/json/{API_KEY}"
 
 ALLSVENSKAN_LEAGUE_ID = "4347"
-DAYS_AHEAD = 7  
+DAYS_AHEAD = 7
+DAYS_BACK = 14
 
 
 CACHE_TTL = timedelta(hours=1)
 _cache: list[tuple[str, str]] | None = None
 _cache_time: datetime | None = None
+_results_cache: list[dict] | None = None
+_results_cache_time: datetime | None = None
 
 
 NAME_MAP = {
@@ -59,7 +62,7 @@ def _fetch_day(day: str) -> list[dict]:
     return resp.json().get("events") or []
 
 
-def fetch_upcoming_fixtures(days: int = DAYS_AHEAD) -> list[tuple[str, str]]:
+def fetch_upcoming_fixtures(days: int = DAYS_AHEAD) -> list[dict]:
     
     global _cache, _cache_time
 
@@ -68,7 +71,7 @@ def fetch_upcoming_fixtures(days: int = DAYS_AHEAD) -> list[tuple[str, str]]:
         if datetime.now() - _cache_time < CACHE_TTL:
             return _cache
 
-    fixtures: list[tuple[str, str]] = []
+    fixtures: list[dict] = []
     today = date.today()
     for offset in range(days):
         day = (today + timedelta(days=offset)).isoformat()
@@ -78,7 +81,7 @@ def fetch_upcoming_fixtures(days: int = DAYS_AHEAD) -> list[tuple[str, str]]:
                 continue
             home = _map_team(event["strHomeTeam"])
             away = _map_team(event["strAwayTeam"])
-            fixtures.append((home, away))
+            fixtures.append({"home": home , "away" : away , "date" : event["dateEvent"] , "time" : event["strTime"] ,"id" : event["idEvent"]})
 
     _cache = fixtures
     _cache_time = datetime.now()
@@ -87,5 +90,5 @@ def fetch_upcoming_fixtures(days: int = DAYS_AHEAD) -> list[tuple[str, str]]:
 
 if __name__ == "__main__":
     # Quick manual check: python -m src.fixtures
-    for home, away in fetch_upcoming_fixtures():
-        print(f"{home} vs {away}")
+    for f in fetch_upcoming_fixtures():
+        print(f"{f["id"]}, {f["home"]} vs {f["away"]} : {f["date"]} : {f["time"]}")

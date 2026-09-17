@@ -27,6 +27,10 @@ class Prediction(BaseModel):
     home_win: float
     draw: float
     away_win: float
+    date: str
+    time: str
+    match_id : str
+
 
 
 class PredictionsResponse(BaseModel):
@@ -43,15 +47,20 @@ def predict_fixtures_endpoint(request: FixturesRequest) -> PredictionsResponse:
 def get_fixtures_endpoint() : 
     result = fetch_upcoming_fixtures()
     fixtures = []
-    for home, away in result:
-        fixture = Fixture(home_team=home, away_team=away)
+    for f in result:
+        fixture = Fixture(home_team=f["home"], away_team=f["away"])
         fixtures.append(fixture)
     return FixturesRequest(fixtures=fixtures)
 
 @app.get("/upcoming-round" , response_model=PredictionsResponse)
 def get_upcoming_rounds_endpoint():
     upcoming_rounds = fetch_upcoming_fixtures()
-    results = predict_fixtures(upcoming_rounds)
+    team_tuples = [(f["home"] , f["away"]) for f in upcoming_rounds]
+    results = predict_fixtures(team_tuples)
+    for pred, fixture in zip(results, upcoming_rounds):
+        pred["date"] = fixture["date"]
+        pred["time"] = fixture["time"]
+        pred["match_id"] = fixture["id"]
     return PredictionsResponse(predictions=results)
 
 @app.get("/health")
