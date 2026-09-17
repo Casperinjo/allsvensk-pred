@@ -1,0 +1,49 @@
+# Cloud Build CI/CD pipeline: test -> build -> push -> deploy to Cloud Run.
+# Triggered on push to main. If pytest fails, the build stops and nothing deploys,
+# so a red test gates the deploy.
+steps:
+  # 1. Run the test suite (gates everything below).
+  - id: test
+    name: python:3.12-slim
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        pip install -r requirements-dev.txt
+        python -m pytest
+
+  # 2. Build the image, tagged with the commit SHA for traceability.
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args: ["build", "-t", "${_IMAGE}:${SHORT_SHA}", "."]
+
+  # 3. Push it to Artifact Registry.
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args: ["push", "${_IMAGE}:${SHORT_SHA}"]
+
+  # 4. Deploy that exact image to Cloud Run.
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - allsvensk-pred
+      - --image=${_IMAGE}:${SHORT_SHA}
+      - --region=europe-north1
+      - --allow-unauthenticated
+      - --port=8000
+      - --memory=1Gi
+
+images:
+  - "${_IMAGE}:${SHORT_SHA}"
+
+substitutions:
+  # Reuses the Artifact Registry repo that `gcloud run deploy --source` created.
+  _IMAGE: europe-north1-docker.pkg.dev/${PROJECT_ID}/cloud-run-source-deploy/allsvensk-pred
+
+options:
+  # Required when the build runs as a user/compute service account without a
+  # dedicated logs bucket — otherwise newer Cloud Build errors on logging config.
+  logging: CLOUD_LOGGING_ONLY
