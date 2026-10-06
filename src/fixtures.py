@@ -9,7 +9,7 @@ API_KEY = os.environ.get("THESPORTSDB_KEY", "3")
 BASE_URL = f"https://www.thesportsdb.com/api/v1/json/{API_KEY}"
 
 ALLSVENSKAN_LEAGUE_ID = "4347"
-DAYS_AHEAD = 7
+DAYS_AHEAD = 14
 DAYS_BACK = 14
 
 
@@ -59,7 +59,11 @@ def _fetch_day(day: str) -> list[dict]:
         timeout=10,
     )
     resp.raise_for_status()
-    return resp.json().get("events") or []
+    try:
+        data = resp.json()
+    except ValueError:
+        return []
+    return data.get("events") or []
 
 
 def fetch_upcoming_fixtures(days: int = DAYS_AHEAD) -> list[dict]:

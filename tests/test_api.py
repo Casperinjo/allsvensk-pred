@@ -20,6 +20,10 @@ def test_upcoming_round_returns_predictions(monkeypatch):
     monkeypatch.setattr(main, "predict_fixtures", lambda pairs: [
         {"home_team": "A", "away_team": "B", "home_win": 0.5, "draw": 0.3, "away_win": 0.2},
     ])
+    # Persistence is mocked out — the endpoint calls save_predictions, but the test
+    # must not reach real Firestore (CI has no credentials). Capture what it's handed.
+    saved = []
+    monkeypatch.setattr(main, "save_predictions", lambda preds: saved.extend(preds))
 
     resp = client.get("/upcoming-round")
 
@@ -31,6 +35,29 @@ def test_upcoming_round_returns_predictions(monkeypatch):
     # fixture metadata attached by the endpoint
     assert preds[0]["date"] == "2026-09-20"
     assert preds[0]["match_id"] == "999"
+    # the predictions reached save_predictions WITH the fixture metadata attached
+    assert len(saved) == 1
+    assert saved[0]["match_id"] == "999"
+
+
+def test_upcoming_round_survives_save_failure(monkeypatch):
+    # A Firestore outage must not fail the prediction the user asked for: the
+    # endpoint logs the error and still returns 200 with the predictions.
+    monkeypatch.setattr(main, "fetch_upcoming_fixtures", lambda: [
+        {"home": "A", "away": "B", "date": "2026-09-20", "time": "15:00:00", "id": "999"},
+    ])
+    monkeypatch.setattr(main, "predict_fixtures", lambda pairs: [
+        {"home_team": "A", "away_team": "B", "home_win": 0.5, "draw": 0.3, "away_win": 0.2},
+    ])
+
+    def boom(preds):
+        raise RuntimeError("Firestore is down")
+    monkeypatch.setattr(main, "save_predictions", boom)
+
+    resp = client.get("/upcoming-round")
+
+    assert resp.status_code == 200
+    assert resp.json()["predictions"][0]["home_team"] == "A"
 
 
 def test_predict_fixtures_accepts_body(monkeypatch):
