@@ -3,180 +3,362 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Allsvenskan — Upcoming Round Predictions</title>
+  <title>Allsvenskan Predictor</title>
   <style>
     :root {
       color-scheme: light;
-      --page:           #f9f9f7;
-      --surface-1:      #fcfcfb;
-      --text-primary:   #0b0b0b;
-      --text-secondary: #52514e;
-      --muted:          #898781;
-      --border:         rgba(11, 11, 11, 0.10);
-      --home:           #2a78d6;  /* categorical slot 1 — blue    */
-      --draw:           #008300;  /* categorical slot 2 — green   */
-      --away:           #c0447a;  /* categorical slot 3 — magenta (stepped for label contrast) */
+      --page:        #eef0f4;
+      --surface:     #ffffff;
+      --surface-2:   #f5f6f9;
+      --ink:         #0a0a0b;
+      --ink-2:       #4a4b52;
+      --muted:       #8a8c95;
+      --border:      rgba(10, 10, 20, 0.09);
+      --shadow:      0 1px 2px rgba(10,10,20,.04), 0 8px 24px rgba(10,10,20,.06);
+      --home:        #1f6feb;  /* blue    */
+      --draw:        #0fa34a;  /* green   */
+      --away:        #e5346f;  /* magenta */
+      --good:        #0fa34a;
+      --bad:         #e5346f;
+      --accent-ink:  #ffffff;
     }
     @media (prefers-color-scheme: dark) {
       :root:where(:not([data-theme="light"])) {
         color-scheme: dark;
-        --page:           #0d0d0d;
-        --surface-1:      #1a1a19;
-        --text-primary:   #ffffff;
-        --text-secondary: #c3c2b7;
-        --muted:          #898781;
-        --border:         rgba(255, 255, 255, 0.10);
-        --home:           #3987e5;
-        --draw:           #10a010;
-        --away:           #d55181;
+        --page:      #08090c;
+        --surface:   #15171d;
+        --surface-2: #1d2027;
+        --ink:       #ffffff;
+        --ink-2:     #c2c5cf;
+        --muted:     #7d808b;
+        --border:    rgba(255, 255, 255, 0.10);
+        --shadow:    0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+        --home:      #4a94ff;
+        --draw:      #22c766;
+        --away:      #ff5c8d;
+        --good:      #22c766;
+        --bad:       #ff5c8d;
       }
     }
     :root[data-theme="dark"] {
       color-scheme: dark;
-      --page:           #0d0d0d;
-      --surface-1:      #1a1a19;
-      --text-primary:   #ffffff;
-      --text-secondary: #c3c2b7;
-      --muted:          #898781;
-      --border:         rgba(255, 255, 255, 0.10);
-      --home:           #3987e5;
-      --draw:           #10a010;
-      --away:           #d55181;
+      --page:      #08090c;
+      --surface:   #15171d;
+      --surface-2: #1d2027;
+      --ink:       #ffffff;
+      --ink-2:     #c2c5cf;
+      --muted:     #7d808b;
+      --border:    rgba(255, 255, 255, 0.10);
+      --shadow:    0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+      --home:      #4a94ff;
+      --draw:      #22c766;
+      --away:      #ff5c8d;
+      --good:      #22c766;
+      --bad:       #ff5c8d;
     }
 
     * { box-sizing: border-box; }
     html, body { margin: 0; }
     body {
       background: var(--page);
-      color: var(--text-primary);
-      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-      line-height: 1.5;
+      color: var(--ink);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.45;
       -webkit-font-smoothing: antialiased;
     }
-    .wrap { max-width: 720px; margin: 0 auto; padding: 32px 20px 64px; }
+    .wrap { max-width: 640px; margin: 0 auto; padding: 28px 18px 72px; }
 
-    header { margin-bottom: 8px; }
-    h1 { font-size: 1.5rem; font-weight: 650; margin: 0 0 4px; letter-spacing: -0.01em; }
-    .sub { color: var(--text-secondary); font-size: 0.9rem; margin: 0; }
-
-    /* Legend — identity is never color-alone */
-    .legend {
-      display: flex; flex-wrap: wrap; gap: 16px;
-      margin: 20px 0 24px; padding-bottom: 20px;
-      border-bottom: 1px solid var(--border);
+    /* ---- Header + record badge ---- */
+    header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 16px; margin-bottom: 26px;
     }
-    .legend span { display: inline-flex; align-items: center; gap: 7px; font-size: 0.82rem; color: var(--text-secondary); }
-    .chip { width: 11px; height: 11px; border-radius: 3px; flex: 0 0 auto; }
-    .chip.home { background: var(--home); }
-    .chip.draw { background: var(--draw); }
-    .chip.away { background: var(--away); }
-
-    .card {
-      background: var(--surface-1);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 16px 18px;
-      margin-bottom: 12px;
+    .brand h1 {
+      font-size: 1.6rem; font-weight: 820; margin: 0; letter-spacing: -0.02em;
+      line-height: 1.1;
     }
-    .teams {
-      display: flex; align-items: baseline; justify-content: space-between;
-      gap: 12px; margin-bottom: 12px;
+    .brand .tag {
+      display: inline-block; margin-top: 6px;
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--muted);
     }
-    .team { font-size: 1.02rem; font-weight: 560; }
-    .team.away { text-align: right; }
-    .team .fav { color: var(--text-primary); }
-    .vs { color: var(--muted); font-size: 0.78rem; font-weight: 500; flex: 0 0 auto; }
+    .record {
+      flex: 0 0 auto; text-align: center;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 10px 16px; box-shadow: var(--shadow);
+      min-width: 104px;
+    }
+    .record .big {
+      font-size: 1.5rem; font-weight: 820; letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums; line-height: 1;
+    }
+    .record .big.good { color: var(--good); }
+    .record .lbl {
+      display: block; margin-top: 4px;
+      font-size: 0.64rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--muted);
+    }
 
-    /* 100%-stacked bar: 2px surface gaps between fills, rounded data-ends */
-    .bar { display: flex; gap: 2px; height: 12px; margin-bottom: 10px; }
-    .seg { min-width: 2px; border-radius: 3px; }
+    .section-title {
+      font-size: 0.74rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--muted); margin: 0 0 12px 2px;
+    }
+
+    /* ---- Match row (pick-first, tap to expand) ---- */
+    .match {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; margin-bottom: 10px; box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .match-head {
+      display: grid; grid-template-columns: 1fr auto; align-items: center;
+      gap: 12px; padding: 14px 16px; cursor: pointer; user-select: none;
+    }
+    .match-head:hover { background: var(--surface-2); }
+    .kickoff {
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 3px;
+    }
+    .fixture { font-size: 1.08rem; font-weight: 720; letter-spacing: -0.01em; }
+    .fixture .vs { color: var(--muted); font-weight: 600; font-size: 0.82rem; margin: 0 7px; }
+
+    .pick { display: flex; align-items: center; gap: 10px; }
+    .pick-pill {
+      display: inline-flex; flex-direction: column; align-items: center;
+      padding: 7px 14px; border-radius: 10px; min-width: 74px;
+      color: var(--accent-ink);
+    }
+    .pick-pill.home { background: var(--home); }
+    .pick-pill.draw { background: var(--draw); }
+    .pick-pill.away { background: var(--away); }
+    .pick-pill .out {
+      font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+      opacity: 0.92;
+    }
+    .pick-pill .conf {
+      font-size: 1.12rem; font-weight: 820; font-variant-numeric: tabular-nums; line-height: 1.1;
+    }
+    .chev { color: var(--muted); transition: transform 0.18s ease; font-size: 0.9rem; }
+    .match.open .chev { transform: rotate(180deg); }
+
+    /* ---- Expanded probabilities ---- */
+    .detail {
+      display: none; padding: 0 16px 16px;
+      border-top: 1px solid var(--border);
+    }
+    .match.open .detail { display: block; }
+    .detail-inner { padding-top: 14px; }
+    .bar { display: flex; gap: 2px; height: 14px; margin-bottom: 10px; border-radius: 4px; overflow: hidden; }
+    .seg { min-width: 3px; }
     .seg.home { background: var(--home); }
     .seg.draw { background: var(--draw); }
     .seg.away { background: var(--away); }
+    .probs { display: flex; justify-content: space-between; gap: 8px; }
+    .prob {
+      display: inline-flex; align-items: center; gap: 7px; font-size: 0.86rem; color: var(--ink-2);
+    }
+    .prob .dot { width: 10px; height: 10px; border-radius: 3px; flex: 0 0 auto; }
+    .prob .dot.home { background: var(--home); }
+    .prob .dot.draw { background: var(--draw); }
+    .prob .dot.away { background: var(--away); }
+    .prob .v { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--ink); }
+    .prob.fav .v::after { content: " ★"; color: var(--muted); font-size: 0.72rem; }
 
-    /* Numbers wear text ink, not the fill color */
-    .stats { display: flex; justify-content: space-between; gap: 8px; }
-    .stat { display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--text-secondary); }
-    .stat .val { font-variant-numeric: tabular-nums; color: var(--text-primary); font-weight: 500; }
-    .stat.is-fav .val { font-weight: 700; }
-    .stat.is-fav::after { content: "★"; color: var(--muted); font-size: 0.7rem; }
+    /* ---- Track record / recent results ---- */
+    .record-block { margin-top: 38px; }
+    .summary {
+      display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;
+    }
+    .stat-card {
+      flex: 1 1 0; min-width: 92px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px 14px; box-shadow: var(--shadow);
+    }
+    .stat-card .n { font-size: 1.3rem; font-weight: 820; font-variant-numeric: tabular-nums; }
+    .stat-card .k {
+      font-size: 0.64rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--muted); margin-top: 2px;
+    }
+    .result {
+      display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+      padding: 11px 14px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 11px; margin-bottom: 7px;
+    }
+    .verdict { font-size: 1.05rem; font-weight: 800; width: 1.2em; text-align: center; }
+    .verdict.ok { color: var(--good); }
+    .verdict.no { color: var(--bad); }
+    .result .match-name { font-size: 0.95rem; font-weight: 650; }
+    .result .call { font-size: 0.74rem; color: var(--muted); margin-top: 1px; }
+    .result .call b { color: var(--ink-2); font-weight: 700; }
+    .result .date { font-size: 0.7rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 
-    .note { color: var(--muted); font-size: 0.8rem; margin-top: 24px; }
-    .state { color: var(--text-secondary); padding: 40px 0; text-align: center; }
-    .state.error { color: var(--away); }
+    /* ---- States ---- */
+    .state { color: var(--ink-2); padding: 34px 0; text-align: center; font-size: 0.92rem; }
+    .state.error { color: var(--bad); }
+    .note { color: var(--muted); font-size: 0.76rem; margin-top: 26px; text-align: center; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
-      <h1>Allsvenskan — Upcoming Round</h1>
-      <p class="sub">Model-predicted outcome probabilities for the next fixtures.</p>
+      <div class="brand">
+        <h1>Allsvenskan Predictor</h1>
+        <span class="tag">Model-called match outcomes</span>
+      </div>
+      <div class="record" id="record">
+        <div class="big">—</div>
+        <span class="lbl">Accuracy</span>
+      </div>
     </header>
 
-    <div class="legend" aria-hidden="true">
-      <span><i class="chip home"></i> Home win</span>
-      <span><i class="chip draw"></i> Draw</span>
-      <span><i class="chip away"></i> Away win</span>
+    <p class="section-title">Next round</p>
+    <div id="upcoming"><p class="state">Loading fixtures…</p></div>
+
+    <div class="record-block">
+      <p class="section-title">Track record</p>
+      <div id="results"><p class="state">Loading results…</p></div>
     </div>
 
-    <div id="content"><p class="state">Loading fixtures…</p></div>
-
-    <p class="note">Probabilities are the model's estimate and sum to 100%. ★ marks the most likely outcome.</p>
+    <p class="note">Confidence is the model's probability for its pick. Tap a match for the full home / draw / away split.</p>
   </div>
 
   <script>
+    const OUTCOMES = {
+      home: { label: "Home", key: "home" },
+      draw: { label: "Draw", key: "draw" },
+      away: { label: "Away", key: "away" },
+    };
     const pct = (x) => Math.round(x * 100);
 
-    function card(p) {
-      const outcomes = [
+    // Derive the model's pick (argmax) and confidence from the three probs.
+    function pickOf(p) {
+      const arr = [
         { key: "home", label: "Home", prob: p.home_win },
         { key: "draw", label: "Draw", prob: p.draw },
         { key: "away", label: "Away", prob: p.away_win },
       ];
-      const favIdx = outcomes.reduce((best, o, i, a) => (o.prob > a[best].prob ? i : best), 0);
+      const fav = arr.reduce((b, o) => (o.prob > b.prob ? o : b), arr[0]);
+      return { arr, fav };
+    }
 
-      const segs = outcomes
+    function fmtDate(d, t) {
+      if (!d) return "";
+      // d: "2026-10-18", t: "15:00:00"
+      const dt = new Date(`${d}T${t || "00:00:00"}`);
+      if (isNaN(dt)) return t ? `${d} ${t.slice(0, 5)}` : d;
+      const day = dt.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+      return t ? `${day} · ${t.slice(0, 5)}` : day;
+    }
+
+    function matchRow(p, i) {
+      const { arr, fav } = pickOf(p);
+      const segs = arr
         .map((o) => `<div class="seg ${o.key}" style="flex-grow:${o.prob}" title="${o.label} ${pct(o.prob)}%"></div>`)
         .join("");
-
-      const stats = outcomes
-        .map((o, i) => `
-          <span class="stat ${i === favIdx ? "is-fav" : ""}">
-            <i class="chip ${o.key}"></i>${o.label}
-            <span class="val">${pct(o.prob)}%</span>
+      const probs = arr
+        .map((o) => `
+          <span class="prob ${o.key === fav.key ? "fav" : ""}">
+            <i class="dot ${o.key}"></i>${o.label}
+            <span class="v">${pct(o.prob)}%</span>
           </span>`)
         .join("");
-
       return `
-        <div class="card">
-          <div class="teams">
-            <span class="team home">${p.home_team}</span>
-            <span class="vs">vs</span>
-            <span class="team away">${p.away_team}</span>
+        <div class="match" data-i="${i}">
+          <div class="match-head" onclick="this.parentElement.classList.toggle('open')">
+            <div>
+              <div class="kickoff">${fmtDate(p.date, p.time) || "Upcoming"}</div>
+              <div class="fixture">${p.home_team}<span class="vs">v</span>${p.away_team}</div>
+            </div>
+            <div class="pick">
+              <div class="pick-pill ${fav.key}">
+                <span class="out">${fav.label}</span>
+                <span class="conf">${pct(fav.prob)}%</span>
+              </div>
+              <span class="chev">▾</span>
+            </div>
           </div>
-          <div class="bar">${segs}</div>
-          <div class="stats">${stats}</div>
+          <div class="detail">
+            <div class="detail-inner">
+              <div class="bar">${segs}</div>
+              <div class="probs">${probs}</div>
+            </div>
+          </div>
         </div>`;
     }
 
-    async function load() {
-      const el = document.getElementById("content");
+    async function loadUpcoming() {
+      const el = document.getElementById("upcoming");
       try {
         const res = await fetch("/upcoming-round");
         if (!res.ok) throw new Error(`API returned ${res.status}`);
         const data = await res.json();
         const preds = data.predictions || [];
-        if (preds.length === 0) {
-          el.innerHTML = `<p class="state">No upcoming matches found in the next few days.</p>`;
+        if (!preds.length) {
+          el.innerHTML = `<p class="state">No upcoming matches in the next couple of weeks — check back when the next round is scheduled.</p>`;
           return;
         }
-        el.innerHTML = preds.map(card).join("");
+        el.innerHTML = preds.map(matchRow).join("");
       } catch (err) {
-        el.innerHTML = `<p class="state error">Could not load predictions: ${err.message}. Is the API running?</p>`;
+        el.innerHTML = `<p class="state error">Couldn't load predictions: ${err.message}.</p>`;
       }
     }
 
-    load();
+    function renderRecord(data) {
+      const badge = document.getElementById("record");
+      const acc = data.accuracy;
+      if (acc == null) {
+        badge.innerHTML = `<div class="big">—</div><span class="lbl">No results yet</span>`;
+      } else {
+        badge.innerHTML = `<div class="big good">${pct(acc)}%</div><span class="lbl">${data.correct}/${data.graded} correct</span>`;
+      }
+    }
+
+    function resultRow(p) {
+      const ok = p.status === "correct";
+      const name = `${p.home_team} v ${p.away_team}`;
+      const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : "—");
+      return `
+        <div class="result">
+          <span class="verdict ${ok ? "ok" : "no"}">${ok ? "✓" : "✗"}</span>
+          <div>
+            <div class="match-name">${name}</div>
+            <div class="call">picked <b>${cap(p.predicted_pick)}</b> · ended <b>${cap(p.actual_result)}</b></div>
+          </div>
+          <span class="date">${fmtDate(p.date, null)}</span>
+        </div>`;
+    }
+
+    async function loadResults() {
+      const el = document.getElementById("results");
+      try {
+        const res = await fetch("/track-record");
+        if (!res.ok) throw new Error(`API returned ${res.status}`);
+        const data = await res.json();
+        renderRecord(data);
+
+        const graded = (data.predictions || [])
+          .filter((p) => p.status === "correct" || p.status === "incorrect")
+          .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
+          .slice(0, 15);
+
+        const summary = `
+          <div class="summary">
+            <div class="stat-card"><div class="n">${data.graded}</div><div class="k">Graded</div></div>
+            <div class="stat-card"><div class="n">${data.correct}</div><div class="k">Correct</div></div>
+            <div class="stat-card"><div class="n">${data.total}</div><div class="k">Tracked</div></div>
+          </div>`;
+
+        if (!graded.length) {
+          el.innerHTML = summary + `<p class="state">No graded matches yet — predictions get scored once the matches are played.</p>`;
+          return;
+        }
+        el.innerHTML = summary + graded.map(resultRow).join("");
+      } catch (err) {
+        el.innerHTML = `<p class="state error">Couldn't load track record: ${err.message}.</p>`;
+      }
+    }
+
+    loadUpcoming();
+    loadResults();
   </script>
 </body>
 </html>
