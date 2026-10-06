@@ -65,6 +65,18 @@ def _fetch_day(day: str) -> list[dict]:
         return []
     return data.get("events") or []
 
+def _collect_events(offsets, status) -> list[dict]:
+    today = date.today()
+    events = []
+    for offset in offsets:
+        day = (today + timedelta(days=offset)).isoformat()
+        for event in _fetch_day(day):
+            if event.get("strStatus") != status:
+                continue
+            home = _map_team(event["strHomeTeam"])
+            away = _map_team(event["strAwayTeam"])
+            events.append({"home": home, "away": away, "event": event})
+    return events
 
 def fetch_upcoming_fixtures(days: int = DAYS_AHEAD) -> list[dict]:
     
@@ -76,21 +88,36 @@ def fetch_upcoming_fixtures(days: int = DAYS_AHEAD) -> list[dict]:
             return _cache
 
     fixtures: list[dict] = []
-    today = date.today()
-    for offset in range(days):
-        day = (today + timedelta(days=offset)).isoformat()
-        for event in _fetch_day(day):
-
-            if event.get("strStatus") != "NS":
-                continue
-            home = _map_team(event["strHomeTeam"])
-            away = _map_team(event["strAwayTeam"])
-            fixtures.append({"home": home , "away" : away , "date" : event["dateEvent"] , "time" : event["strTime"] ,"id" : event["idEvent"]})
+    for item in _collect_events(range(days), "NS"):
+        e = item["event"]
+        fixtures.append({"home": item["home"], "away": item["away"],
+                        "date": e["dateEvent"], "time": e["strTime"], "id": e["idEvent"]})
 
     _cache = fixtures
     _cache_time = datetime.now()
     return fixtures
 
+def fetch_recent_results(days : int = DAYS_BACK) -> list[dict]:
+    global _results_cache , _results_cache_time
+    if _results_cache is not None and _results_cache_time is not None:
+            if datetime.now() - _results_cache_time < CACHE_TTL:
+                return _results_cache
+    results = []
+    for item in _collect_events(range(-days, 1), "FT"):
+        e = item["event"]
+        home_score = int(e["intHomeScore"])
+        away_score = int(e["intAwayScore"]) 
+        if home_score > away_score:
+            result = "home"
+        elif home_score == away_score:
+            result = "draw"
+        else:
+            result = "away"
+        results.append({"id" : e["idEvent"] , "result" : result})
+
+    _results_cache = results
+    _results_cache_time = datetime.now()
+    return results
 
 if __name__ == "__main__":
     # Quick manual check: python -m src.fixtures

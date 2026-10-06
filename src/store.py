@@ -5,6 +5,7 @@ lives here too — written by you on top of `get_db()` and PREDICTIONS_COLLECTIO
 """
 
 from google.cloud import firestore
+from google.cloud.firestore_v1.base_query import FieldFilter
 
 # One Firestore collection holds all prediction records, one document per match
 # (keyed by TheSportsDB match_id — see save logic).
@@ -53,5 +54,18 @@ def save_predictions(predictions):
             "actual_result": None,
         })
 
+def score_predictions(results : list[dict]) -> None:
+    collection = get_db().collection(PREDICTIONS_COLLECTION)
+    pending = collection.where(filter=FieldFilter("status", "==", "pending")).stream()
+    results_by_id = {r["id"]: r["result"] for r in results}
 
+    for doc in pending:
+        if doc.id not in results_by_id:
+            continue
+
+        predicted_pick = doc.to_dict()["predicted_pick"]
+        actual = results_by_id[doc.id]
+        status = "correct" if actual == predicted_pick else "incorrect"
+
+        doc.reference.update({"status": status, "actual_result": actual})
 
