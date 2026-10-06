@@ -6,8 +6,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from src.predict import predict_fixtures
-from src.fixtures import fetch_upcoming_fixtures
-from src.store import save_predictions
+from src.fixtures import fetch_upcoming_fixtures, fetch_recent_results
+from src.store import save_predictions, load_predictions, score_predictions
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
@@ -40,6 +40,21 @@ class Prediction(BaseModel):
 class PredictionsResponse(BaseModel):
     predictions: list[Prediction]
 
+@app.get("/track-record")
+def track_record_endpoint():
+    try:
+        score_predictions(fetch_recent_results())
+    except Exception:
+        logger.exception("Scoring on view failed")
+    predictions = load_predictions()
+    graded = [p for p in predictions if p["status"] != "pending"]
+    correct = sum(1 for p in graded if p["status"] == "correct")
+    accuracy = correct / len(graded) if graded else None
+
+    record = {"total": len(predictions), "graded": len(graded),
+             "correct": correct, "accuracy": accuracy,
+             "predictions": predictions}
+    return record
 
 @app.post("/predict-fixtures", response_model=PredictionsResponse)
 def predict_fixtures_endpoint(request: FixturesRequest) -> PredictionsResponse:

@@ -69,3 +69,7 @@ def score_predictions(results : list[dict]) -> None:
 
         doc.reference.update({"status": status, "actual_result": actual})
 
+
+def load_predictions():
+    collection = get_db().collection(PREDICTIONS_COLLECTION)
+    return [doc.to_dict() for doc in collection.stream()]

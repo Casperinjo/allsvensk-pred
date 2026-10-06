@@ -82,3 +82,63 @@ def test_health_endpoint():
     resp = client.get("/health")
     assert resp.status_code == 200
     assert resp.json() == {"status": "ok"}
+
+
+# ---------------------------------------------------------------------------
+# /track-record — scoring-on-view, then aggregation over stored predictions
+# ---------------------------------------------------------------------------
+
+def _stub_scoring(monkeypatch):
+    """Neutralise the score-on-view side (network + Firestore) for these tests."""
+    monkeypatch.setattr(main, "fetch_recent_results", lambda: [])
+    monkeypatch.setattr(main, "score_predictions", lambda results: None)
+
+
+def test_track_record_aggregates_graded(monkeypatch):
+    _stub_scoring(monkeypatch)
+    # 2 correct, 1 incorrect, 1 still pending -> accuracy is over the 3 graded only.
+    monkeypatch.setattr(main, "load_predictions", lambda: [
+        {"match_id": "1", "status": "correct", "predicted_pick": "home"},
+        {"match_id": "2", "status": "correct", "predicted_pick": "away"},
+        {"match_id": "3", "status": "incorrect", "predicted_pick": "home"},
+        {"match_id": "4", "status": "pending", "predicted_pick": "draw"},
+    ])
+
+    resp = client.get("/track-record")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 4
+    assert body["graded"] == 3
+    assert body["correct"] == 2
+    assert body["accuracy"] == 2 / 3
+
+
+def test_track_record_accuracy_none_when_nothing_graded(monkeypatch):
+    # Divide-by-zero guard: before any match is played, accuracy must be null,
+    # not a 500.
+    _stub_scoring(monkeypatch)
+    monkeypatch.setattr(main, "load_predictions", lambda: [
+        {"match_id": "1", "status": "pending", "predicted_pick": "home"},
+    ])
+
+    resp = client.get("/track-record")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["graded"] == 0
+    assert body["accuracy"] is None
+
+
+def test_track_record_survives_scoring_failure(monkeypatch):
+    # A failed score-on-view (network/Firestore down) must still return the
+    # record from whatever is already stored.
+    monkeypatch.setattr(main, "fetch_recent_results", lambda: (_ for _ in ()).throw(RuntimeError("API down")))
+    monkeypatch.setattr(main, "load_predictions", lambda: [
+        {"match_id": "1", "status": "correct", "predicted_pick": "home"},
+    ])
+
+    resp = client.get("/track-record")
+
+    assert resp.status_code == 200
+    assert resp.json()["correct"] == 1
