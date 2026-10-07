@@ -25,3 +25,44 @@ jobs:
 
       - name: Run tests
         run: python -m pytest
+
+  # Builds the production image the same way the CD pipeline does. Deliberately NOT
+  # `needs: test` — they run in parallel so a broken Dockerfile and a failing test
+  # surface at the same time instead of one after the other.
+  build-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      # The Dockerfile ends with `RUN python train.py`, so this validates the whole
+      # load -> features -> fit -> persist pipeline. Nothing else covers it: there is
+      # no test_train.py, so before this job train.py was only ever exercised AFTER
+      # merge, by Cloud Build.
+      - name: Build the image
+        run: docker build -t allsvensk-pred:ci .
+
+      # Building proves the pipeline runs; starting the container proves the image can
+      # actually serve. Catches what a build alone misses — a bad CMD, a dependency
+      # that is in requirements-dev but not requirements, or an import that only
+      # resolves under pytest's pythonpath.
+      - name: Smoke-test the container
+        run: |
+          docker run -d --name app -p 8000:8000 allsvensk-pred:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8000/health; then
+              echo "container is serving"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::container never became healthy within 60s"
+          docker logs app
+          exit 1
+
+      # Only /health is probed: it is dependency-free by design. The prediction
+      # endpoints would need the TheSportsDB API and Firestore credentials, which CI
+      # has neither of — and should not have.
+      - name: Container logs
+        if: always()
+        run: docker logs app || true
