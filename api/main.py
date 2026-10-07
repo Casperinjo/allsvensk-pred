@@ -1,14 +1,19 @@
 import logging
 from pathlib import Path
 
+from fastapi import Request
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from fastapi.responses import JSONResponse
 
 from src.predict import predict_fixtures
 from src.fixtures import fetch_upcoming_fixtures, fetch_recent_results
 from src.store import save_predictions, load_predictions, score_predictions
-from src.logging_config import setup_logging
+from src.logging_config import setup_logging, request_id_var
+
+import uuid
+
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
@@ -21,6 +26,29 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Allsvenskan Predictor API")
+
+@app.middleware("http")
+async def request_id_middleware(request: Request, call_next):
+    raw = request.headers.get("X-Cloud-Trace-Context")
+    rid = raw.split("/")[0][:64] if raw else uuid.uuid4().hex
+
+    token = request_id_var.set(rid)
+    try:
+        response = await call_next(request)
+    except Exception:
+        # Still inside the ContextVar scope, so this line carries request_id —
+        # which is the whole point: the 500 the user reports is greppable.
+        logger.exception("Unhandled error")
+        response = JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error", "request_id": rid},
+        )
+    finally:
+        request_id_var.reset(token)
+
+    response.headers["X-Request-ID"] = rid
+    return response
+
 
 
 class Fixture(BaseModel):
