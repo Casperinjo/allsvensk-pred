@@ -5,6 +5,11 @@ import os
 import sys
 import traceback
 
+from contextvars import ContextVar
+
+request_id_var: ContextVar[str | None] = ContextVar("request_id", default=None)
+
+
 class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         message = record.getMessage()
@@ -20,6 +25,10 @@ class JsonFormatter(logging.Formatter):
                 "function" : record.funcName,
             },
         }
+
+        rid = request_id_var.get()
+        if rid:
+            entry["request_id"] = rid
 
         return json.dumps(entry, default=str)
 

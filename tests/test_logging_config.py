@@ -12,31 +12,12 @@ import json
 import logging
 import sys
 
-import pytest
-
 from src.logging_config import JsonFormatter, setup_logging
 
+# The `restore_logging` fixture lives in conftest.py and is autodiscovered by
+# pytest — importing it here would resolve to an unrelated `tests` package that
+# one of our dependencies ships into site-packages.
 UVICORN_LOGGERS = ("uvicorn", "uvicorn.error", "uvicorn.access")
-
-
-@pytest.fixture
-def restore_logging():
-    """Snapshot and restore global logging state around a test."""
-    root = logging.getLogger()
-    saved_root = (root.handlers[:], root.level)
-    saved_uvicorn = {
-        name: (logging.getLogger(name).handlers[:], logging.getLogger(name).propagate)
-        for name in UVICORN_LOGGERS
-    }
-
-    yield
-
-    root.handlers[:] = saved_root[0]
-    root.setLevel(saved_root[1])
-    for name, (handlers, propagate) in saved_uvicorn.items():
-        logger = logging.getLogger(name)
-        logger.handlers[:] = handlers
-        logger.propagate = propagate
 
 
 def make_record(msg="hello %s", args=("world",), level=logging.INFO, exc_info=None):
