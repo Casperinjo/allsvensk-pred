@@ -8,8 +8,15 @@ from pydantic import BaseModel
 from src.predict import predict_fixtures
 from src.fixtures import fetch_upcoming_fixtures, fetch_recent_results
 from src.store import save_predictions, load_predictions, score_predictions
+from src.logging_config import setup_logging
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+
+# Configure logging before anything else can emit a record. uvicorn imports this
+# module after setting up its own loggers, so this call also gets to take those
+# over (see setup_logging). Without it, Python's fallback handler drops anything
+# below WARNING and writes unstructured text.
+setup_logging()
 
 logger = logging.getLogger(__name__)
 
